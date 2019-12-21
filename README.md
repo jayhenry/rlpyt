@@ -1,4 +1,4 @@
-<img align="right" width="205" height="109" src="/images/bair_logo.png">
+<img align="right" width="205" height="109" src="./images/bair_logo.png">
 
 # rlpyt
 
