@@ -30,16 +30,17 @@ def build_and_train(game="pong", run_ID=0, cuda_idx=None):
         batch_B=1,
         max_decorrelation_steps=0,
         eval_n_envs=10,
-        eval_max_steps=int(10e3),
+        eval_max_steps=int(1e3),
         eval_max_trajectories=5,
     )
-    algo = DQN(min_steps_learn=1e3)  # Run with defaults.
+
+    algo = DQN(batch_size=8, min_steps_learn=1e3)  # Run with defaults.
     agent = AtariDqnAgent()
     runner = MinibatchRlEval(
         algo=algo,
         agent=agent,
         sampler=sampler,
-        n_steps=50e6,
+        n_steps=50e3,
         log_interval_steps=1e3,
         affinity=dict(cuda_idx=cuda_idx),
     )
@@ -54,8 +55,8 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--game', help='Atari game', default='pong')
-    parser.add_argument('--run_ID', help='run identifier (logging)', type=int, default=0)
-    parser.add_argument('--cuda_idx', help='gpu to use ', type=int, default=None)
+    parser.add_argument('--run_ID', help='run identifier (logging)', type=int, default=1)
+    parser.add_argument('--cuda_idx', help='gpu to use ', type=int, default=0)
     args = parser.parse_args()
     build_and_train(
         game=args.game,
