@@ -78,6 +78,9 @@ class SerialSampler(BaseSampler):
         # self.samples_np[:] = 0  # Unnecessary and may take time.
         agent_inputs, traj_infos, completed_infos = self.collector.collect_batch(
             self.agent_inputs, self.traj_infos, itr)
+        # Now, self.samples_np has been changed, so self.samples_pyt created by
+        # torch.from_numpy() is changed too. Because self.samples_pyt 's bottom memory
+        # is same with self.samples_np.
         self.collector.reset_if_needed(agent_inputs)
         self.agent_inputs = agent_inputs
         self.traj_infos = traj_infos
