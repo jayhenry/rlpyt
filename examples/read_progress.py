@@ -7,8 +7,8 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-df = pd.read_csv("../data/local/20191225/example_1/run_1/progress.csv")
+df = pd.read_csv("../data/local/20191225/example_1/run_0/progress.csv")
 print(df.columns)
-plt.figure()
+# plt.figure()
 df.plot(x='Iteration', y=['ReturnAverage', 'ReturnStd'])
 plt.show()

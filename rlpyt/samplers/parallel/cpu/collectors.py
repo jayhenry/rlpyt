@@ -21,6 +21,9 @@ class CpuResetCollector(DecorrelatingStartCollector):
         obs_pyt, act_pyt, rew_pyt = torchify_buffer(agent_inputs)
         agent_buf.prev_action[0] = action  # Leading prev_action.
         env_buf.prev_reward[0] = reward
+
+        animate = animate and (itr % 10 == 0)
+        first_sample = True
         self.agent.sample_mode(itr)
         for t in range(self.batch_T):
             env_buf.observation[t] = observation
@@ -28,6 +31,11 @@ class CpuResetCollector(DecorrelatingStartCollector):
             act_pyt, agent_info = self.agent.step(obs_pyt, act_pyt, rew_pyt)
             action = numpify_buffer(act_pyt)
             for b, env in enumerate(self.envs):
+                animate_cur = animate and (b == 0) and first_sample
+                if animate_cur:
+                    env.render()
+                    import time
+                    time.sleep(0.1)
                 # Environment inputs and outputs are numpy arrays.
                 o, r, d, env_info = env.step(action[b])
                 traj_infos[b].step(observation[b], action[b], r, d, agent_info[b],
@@ -38,6 +46,8 @@ class CpuResetCollector(DecorrelatingStartCollector):
                     o = env.reset()
                 if d:
                     self.agent.reset_one(idx=b)
+                    if b == 0:
+                        first_sample = False
                 observation[b] = o
                 reward[b] = r
                 env_buf.done[t, b] = d
