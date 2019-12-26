@@ -13,9 +13,10 @@ class SerialSampler(BaseSampler):
     category)."""
 
     def __init__(self, *args, CollectorCls=CpuResetCollector,
-            eval_CollectorCls=SerialEvalCollector, **kwargs):
+            eval_CollectorCls=SerialEvalCollector, animate=False, **kwargs):
         super().__init__(*args, CollectorCls=CollectorCls,
             eval_CollectorCls=eval_CollectorCls, **kwargs)
+        self.animate=animate
 
     def initialize(
             self,
@@ -48,6 +49,7 @@ class SerialSampler(BaseSampler):
             agent=agent,
             global_B=global_B,
             env_ranks=env_ranks,  # Might get applied redundantly to agent.
+            animate=self.animate,
         )
         if self.eval_n_envs > 0:  # May do evaluation.
             eval_envs = [self.EnvCls(**self.eval_env_kwargs)

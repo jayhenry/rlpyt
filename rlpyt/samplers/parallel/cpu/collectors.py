@@ -21,7 +21,7 @@ class CpuResetCollector(DecorrelatingStartCollector):
         obs_pyt, act_pyt, rew_pyt = torchify_buffer(agent_inputs)
         agent_buf.prev_action[0] = action  # Leading prev_action.
         env_buf.prev_reward[0] = reward
-
+        animate = self.animate
         animate = animate and (itr % 10 == 0)
         first_sample = True
         self.agent.sample_mode(itr)

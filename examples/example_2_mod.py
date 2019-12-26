@@ -75,6 +75,7 @@ def build_and_train(env_id="Hopper-v3", run_ID=0, cuda_idx=None):
         eval_n_envs=1,
         eval_max_steps=int(51e3),
         eval_max_trajectories=50,
+        animate=False,
     )
 
     # env = sampler.collector.envs[0]
@@ -97,10 +98,14 @@ def build_and_train(env_id="Hopper-v3", run_ID=0, cuda_idx=None):
         affinity=dict(cuda_idx=cuda_idx),
     )
     config = dict(env_id=env_id)
-    name = "sac_" + env_id
+    name = "a2c_" + env_id
     log_dir = "example_1"
     with logger_context(log_dir, run_ID, name, config):
         runner.train()
+
+    # Close gym env, when using env.render()
+    for env in sampler.collector.envs:
+        env.close()
 
 
 if __name__ == "__main__":
