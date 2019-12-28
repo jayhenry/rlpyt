@@ -9,6 +9,8 @@ Requires OpenAI gym (and maybe mujoco).  If not installed, move on to next
 example.
 
 """
+import random
+import numpy as np
 
 from rlpyt.samplers.serial.sampler import SerialSampler
 from rlpyt.envs.gym import make as gym_make
@@ -65,6 +67,15 @@ class ModelCls(nn.Module):
 
 
 def build_and_train(env_id="Hopper-v3", run_ID=0, cuda_idx=None):
+    seed = 1
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    # 但是torch.cuda.manual_seed(seed)在没有gpu时也可调用，这样写没什么坏处
+    torch.cuda.manual_seed(seed)
+    # cuDNN在使用deterministic模式时（下面两行），可能会造成性能下降（取决于model）
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
     sampler = SerialSampler(
         EnvCls=gym_make,
         env_kwargs=dict(id=env_id),
@@ -74,7 +85,7 @@ def build_and_train(env_id="Hopper-v3", run_ID=0, cuda_idx=None):
         max_decorrelation_steps=0,
         eval_n_envs=1,
         eval_max_steps=int(51e3),
-        eval_max_trajectories=50,
+        eval_max_trajectories=100,
         animate=False,
     )
 
@@ -86,16 +97,29 @@ def build_and_train(env_id="Hopper-v3", run_ID=0, cuda_idx=None):
     print("discrete", discrete, "ob dim", ob_dim, "ac_dim", ac_dim)
     # algo = SAC()  # Run with defaults.
     # agent = SacAgent()
-    algo = A2C(learning_rate=5e-3)
+    adv_norm = True
+    algo = A2C(learning_rate=10e-3,
+               discount=0.99,  # 0.99
+               gae_lambda=1,
+               value_loss_coeff=1.0,  # 0.5
+               entropy_loss_coeff=0.00,  # 0.01
+               normalize_advantage=adv_norm,
+               )
+    # algo.bootstrap_value = False
     model_kwargs = dict(ob_dim=ob_dim, ac_dim=ac_dim)
-    agent = CategoricalPgAgent(ModelCls=ModelCls,model_kwargs=model_kwargs)
+    agent = CategoricalPgAgent(
+        ModelCls=ModelCls,
+        model_kwargs=model_kwargs,
+        initial_model_state_dict=None,
+    )
     runner = MinibatchRlEval(
         algo=algo,
         agent=agent,
         sampler=sampler,
-        n_steps=1e5,
+        n_steps=0.1e5,
         log_interval_steps=1e3,
         affinity=dict(cuda_idx=cuda_idx),
+        seed=seed,
     )
     config = dict(env_id=env_id)
     name = "a2c_" + env_id
