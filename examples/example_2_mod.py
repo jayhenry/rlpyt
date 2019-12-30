@@ -37,8 +37,11 @@ class ModelCls(nn.Module):
         super().__init__()
         self.ob_dim = ob_dim
         self.ac_dim = ac_dim
-        self.model = MlpModel(self.ob_dim, [64,], 64)
+        self.model = MlpModel(self.ob_dim, [64,], output_size=None,
+                              nonlinearity=torch.nn.Tanh)
         self.pi = torch.nn.Linear(64, self.ac_dim)
+        self.model2 = MlpModel(self.ob_dim, [64,], output_size=None,
+                              nonlinearity=torch.nn.Tanh)
         self.value = torch.nn.Linear(64, 1)
 
     def forward(self, observation, prev_action, prev_reward):
@@ -58,8 +61,9 @@ class ModelCls(nn.Module):
         lead_dim, T, B, input_shape = infer_leading_dims(input, 1)
 
         fc_out = self.model(input.view(T * B, *input_shape))  # Fold if T dimension.
-
         pi = F.softmax(self.pi(fc_out), dim=-1)
+
+        fc_out = self.model2(input.view(T * B, *input_shape))  # Fold if T dimension.
         v = self.value(fc_out).squeeze(-1)
         # Restore leading dimensions: [T,B], [B], or [], as input.
         pi, v = restore_leading_dims((pi, v), lead_dim, T, B)
@@ -68,24 +72,30 @@ class ModelCls(nn.Module):
 
 def build_and_train(env_id="Hopper-v3", run_ID=0, cuda_idx=None):
     seed = 1
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
+    # random.seed(seed)
+    # np.random.seed(seed)
+    # torch.manual_seed(seed)
     # 但是torch.cuda.manual_seed(seed)在没有gpu时也可调用，这样写没什么坏处
-    torch.cuda.manual_seed(seed)
+    # torch.cuda.manual_seed(seed)
     # cuDNN在使用deterministic模式时（下面两行），可能会造成性能下降（取决于model）
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
+    # torch.backends.cudnn.deterministic = True
+    # torch.backends.cudnn.benchmark = False
+
+    batch_steps = 1e3
+    log_steps = batch_steps
+    n_steps = 100 * batch_steps
+    eval_steps = batch_steps
+    eval_trajs = 100
     sampler = SerialSampler(
         EnvCls=gym_make,
         env_kwargs=dict(id=env_id),
         eval_env_kwargs=dict(id=env_id),
-        batch_T=1000,  # One time-step per sampler iteration.
+        batch_T=int(batch_steps),  # One time-step per sampler iteration.
         batch_B=1,  # One environment (i.e. sampler Batch dimension).
         max_decorrelation_steps=0,
         eval_n_envs=1,
-        eval_max_steps=int(51e3),
-        eval_max_trajectories=100,
+        eval_max_steps=int(eval_steps),
+        eval_max_trajectories=eval_trajs,
         animate=False,
     )
 
@@ -98,12 +108,13 @@ def build_and_train(env_id="Hopper-v3", run_ID=0, cuda_idx=None):
     # algo = SAC()  # Run with defaults.
     # agent = SacAgent()
     adv_norm = True
-    algo = A2C(learning_rate=10e-3,
+    algo = A2C(learning_rate=5e-3,
                discount=0.99,  # 0.99
                gae_lambda=1,
                value_loss_coeff=1.0,  # 0.5
                entropy_loss_coeff=0.00,  # 0.01
                normalize_advantage=adv_norm,
+               clip_grad_norm=1e6,
                )
     # algo.bootstrap_value = False
     model_kwargs = dict(ob_dim=ob_dim, ac_dim=ac_dim)
@@ -116,20 +127,28 @@ def build_and_train(env_id="Hopper-v3", run_ID=0, cuda_idx=None):
         algo=algo,
         agent=agent,
         sampler=sampler,
-        n_steps=0.1e5,
-        log_interval_steps=1e3,
+        n_steps=n_steps,
+        log_interval_steps=log_steps,
         affinity=dict(cuda_idx=cuda_idx),
         seed=seed,
     )
     config = dict(env_id=env_id)
     name = "a2c_" + env_id
-    log_dir = "example_1"
+    log_dir = "example_2"
     with logger_context(log_dir, run_ID, name, config):
         runner.train()
 
     # Close gym env, when using env.render()
     for env in sampler.collector.envs:
         env.close()
+
+    traj_infos, eval_time = runner.evaluate_agent(n_steps)
+    # runner.log_diagnostics(50e3, traj_infos, eval_time)
+    rews = [x.Return for x in traj_infos]
+    avg_rew = np.mean(rews)
+    std_rew = np.std(rews)
+    print("length of trajs: {}, avg_rew {}, std_rew {}".format(
+        len(traj_infos), avg_rew, std_rew))
 
 
 if __name__ == "__main__":

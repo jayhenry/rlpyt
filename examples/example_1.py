@@ -40,9 +40,10 @@ def build_and_train(game="pong", run_ID=0, cuda_idx=None):
         algo=algo,
         agent=agent,
         sampler=sampler,
-        n_steps=50e3,
+        n_steps=5e3,
         log_interval_steps=1e3,
         affinity=dict(cuda_idx=cuda_idx),
+        seed=1234,
     )
     config = dict(game=game)
     name = "dqn_" + game
@@ -56,7 +57,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--game', help='Atari game', default='pong')
     parser.add_argument('--run_ID', help='run identifier (logging)', type=int, default=1)
-    parser.add_argument('--cuda_idx', help='gpu to use ', type=int, default=0)
+    parser.add_argument('--cuda_idx', help='gpu to use ', type=int, default=None)
     args = parser.parse_args()
     build_and_train(
         game=args.game,

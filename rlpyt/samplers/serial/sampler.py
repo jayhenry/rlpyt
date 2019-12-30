@@ -30,6 +30,10 @@ class SerialSampler(BaseSampler):
             ):
         B = self.batch_spec.B
         envs = [self.EnvCls(**self.env_kwargs) for _ in range(B)]
+        if hasattr(envs[0], 'seed'):
+            print("Set envs seed {}".format(seed))
+            for env in envs:
+                env.seed(seed)
         global_B = B * world_size
         env_ranks = list(range(rank * B, (rank + 1) * B))
         agent.initialize(envs[0].spaces, share_memory=False,
@@ -54,6 +58,10 @@ class SerialSampler(BaseSampler):
         if self.eval_n_envs > 0:  # May do evaluation.
             eval_envs = [self.EnvCls(**self.eval_env_kwargs)
                 for _ in range(self.eval_n_envs)]
+            if hasattr(eval_envs[0], 'seed'):
+                print("Set eval_envs seed {}".format(seed))
+                for env in eval_envs:
+                    env.seed(seed)
             eval_CollectorCls = self.eval_CollectorCls or SerialEvalCollector
             self.eval_collector = eval_CollectorCls(
                 envs=eval_envs,
