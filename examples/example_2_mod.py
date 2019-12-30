@@ -37,11 +37,13 @@ class ModelCls(nn.Module):
         super().__init__()
         self.ob_dim = ob_dim
         self.ac_dim = ac_dim
-        self.model = MlpModel(self.ob_dim, [64,], output_size=None,
-                              nonlinearity=torch.nn.Tanh)
+        self.model = MlpModel(self.ob_dim, [64, 64], output_size=None,
+                              nonlinearity=torch.nn.Tanh,  # torch.nn.Tanh
+                              )
         self.pi = torch.nn.Linear(64, self.ac_dim)
-        self.model2 = MlpModel(self.ob_dim, [64,], output_size=None,
-                              nonlinearity=torch.nn.Tanh)
+        self.model2 = MlpModel(self.ob_dim, [64, 64], output_size=None,
+                               nonlinearity=torch.nn.ReLU,  # torch.nn.Tanh,
+                               )
         self.value = torch.nn.Linear(64, 1)
 
     def forward(self, observation, prev_action, prev_reward):
@@ -83,9 +85,11 @@ def build_and_train(env_id="Hopper-v3", run_ID=0, cuda_idx=None):
 
     batch_steps = 1e3
     log_steps = batch_steps
-    n_steps = 100 * batch_steps
+    n_steps = 30 * batch_steps
     eval_steps = batch_steps
     eval_trajs = 100
+    lr = 5e-3
+    animate = True
     sampler = SerialSampler(
         EnvCls=gym_make,
         env_kwargs=dict(id=env_id),
@@ -96,7 +100,7 @@ def build_and_train(env_id="Hopper-v3", run_ID=0, cuda_idx=None):
         eval_n_envs=1,
         eval_max_steps=int(eval_steps),
         eval_max_trajectories=eval_trajs,
-        animate=False,
+        animate=animate,
     )
 
     # env = sampler.collector.envs[0]
@@ -108,10 +112,10 @@ def build_and_train(env_id="Hopper-v3", run_ID=0, cuda_idx=None):
     # algo = SAC()  # Run with defaults.
     # agent = SacAgent()
     adv_norm = True
-    algo = A2C(learning_rate=5e-3,
+    algo = A2C(learning_rate=lr,
                discount=0.99,  # 0.99
-               gae_lambda=1,
-               value_loss_coeff=1.0,  # 0.5
+               gae_lambda=0.99,
+               value_loss_coeff=0.5,  # 0.5
                entropy_loss_coeff=0.00,  # 0.01
                normalize_advantage=adv_norm,
                clip_grad_norm=1e6,
@@ -155,6 +159,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--env_id', help='environment ID', default='CartPole-v0')
+    # parser.add_argument('--env_id', help='environment ID', default='MountainCar-v0')
     # parser.add_argument('--env_id', help='environment ID', default='Hopper-v3')
     parser.add_argument('--run_ID', help='run identifier (logging)', type=int, default=0)
     parser.add_argument('--cuda_idx', help='gpu to use ', type=int, default=None)

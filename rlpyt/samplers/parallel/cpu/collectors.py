@@ -35,7 +35,7 @@ class CpuResetCollector(DecorrelatingStartCollector):
                 if animate_cur:
                     env.render()
                     import time
-                    time.sleep(0.1)
+                    time.sleep(0.03)
                 # Environment inputs and outputs are numpy arrays.
                 o, r, d, env_info = env.step(action[b])
                 traj_infos[b].step(observation[b], action[b], r, d, agent_info[b],
